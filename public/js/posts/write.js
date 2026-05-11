@@ -2,14 +2,16 @@
  * Post write page script
  */
 (function initWritePage() {
+    'use strict';
+
     let uploadedImageFile = null;
+    const DRAFT_KEY = 'post_write';
 
     document.addEventListener('DOMContentLoaded', async () => {
         const isReady = await ensureAuthenticated();
         if (!isReady) return;
 
         const form = document.getElementById('writeForm');
-        const btnBack = document.getElementById('btnBack');
         const imageInput = document.getElementById('image');
         const imagePreview = document.getElementById('imagePreview');
         const previewImg = document.getElementById('previewImg');
@@ -23,7 +25,7 @@
         const submitButton = form.querySelector('button[type="submit"]');
         const helperText = document.getElementById('formHelper');
 
-        submitButton.style.background = '#ACA0EB';
+        setSubmitButtonState(submitButton, false);
 
         if (titleInput) {
             titleInput.maxLength = 26;
@@ -39,36 +41,49 @@
             contentInput.addEventListener('input', validateAndUpdateButton);
         }
 
-        function validateAndUpdateButton() {
-            const title = titleInput ? titleInput.value.trim() : '';
-            const content = contentInput ? contentInput.value.trim() : '';
+        if (tagsInput) {
+            tagsInput.addEventListener('input', validateAndUpdateButton);
+        }
 
-            if (title && content) {
-                submitButton.style.background = '#7F6AEE';
-                if (helperText) helperText.style.display = 'none';
-            } else {
-                submitButton.style.background = '#ACA0EB';
-                if (helperText) helperText.style.display = 'block';
+        // Restore draft if exists
+        const draft = loadDraft(DRAFT_KEY);
+        if (draft && (draft.title || draft.content || draft.tags)) {
+            if (showConfirmDialog('작성 중이던 임시 저장된 글이 있습니다. 불러오시겠습니까?')) {
+                if (titleInput && draft.title) titleInput.value = draft.title;
+                if (contentInput && draft.content) {
+                    contentInput.value = draft.content;
+                    contentInput.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+                if (tagsInput && draft.tags) tagsInput.value = draft.tags;
+                validateAndUpdateButton();
             }
         }
 
-        if (btnBack) {
-            btnBack.addEventListener('click', () => history.back());
+        function validateAndUpdateButton() {
+            const title = titleInput ? titleInput.value.trim() : '';
+            const content = contentInput ? contentInput.value.trim() : '';
+            const isReady = Boolean(title && content);
+
+            setSubmitButtonState(submitButton, isReady);
+            if (helperText) helperText.style.display = isReady ? 'none' : 'block';
+
+            // Auto-save
+            saveDraft(DRAFT_KEY, {
+                title: titleInput ? titleInput.value : '',
+                content: contentInput ? contentInput.value : '',
+                tags: tagsInput ? tagsInput.value : ''
+            });
         }
 
         if (imageInput) {
+            setupImageDragAndDrop(imageInput);
             imageInput.addEventListener('change', (event) => {
                 const file = event.target.files && event.target.files[0];
                 if (!file) return;
 
-                if (file.size > 5 * 1024 * 1024) {
-                    showToast('이미지 크기는 5MB 이하여야 합니다.');
-                    imageInput.value = '';
-                    return;
-                }
-
-                if (!file.type.startsWith('image/')) {
-                    showToast('이미지 파일만 업로드 가능합니다.');
+                const validation = validateImageFile(file);
+                if (!validation.valid) {
+                    showToast(validation.message, { type: 'error' });
                     imageInput.value = '';
                     return;
                 }
@@ -103,12 +118,12 @@
                 const tags = parseTagsInput(tagsInput ? tagsInput.value : '');
 
                 if (!title) {
-                    showToast('제목을 입력해 주세요.');
+                    showToast('제목을 입력해 주세요.', { type: 'warning' });
                     return;
                 }
 
                 if (!content) {
-                    showToast('내용을 입력해 주세요.');
+                    showToast('내용을 입력해 주세요.', { type: 'warning' });
                     return;
                 }
 
@@ -125,6 +140,7 @@
                     }
 
                     await createPost(title, content, imageUrl, tags);
+                    clearDraft(DRAFT_KEY);
 
                     if (confirmModal) {
                         confirmModal.style.display = 'flex';
@@ -152,18 +168,4 @@
         if (imageLabel) imageLabel.textContent = '파일을 선택해 주세요';
     }
 
-    function parseTagsInput(value) {
-        if (!value) return [];
-
-        const tags = value
-            .split(',')
-            .map((tag) => tag.trim().replace(/^#/, ''))
-            .filter(Boolean);
-
-        return [...new Set(tags)].slice(0, 5);
-    }
-
-    if (typeof module !== 'undefined' && module.exports) {
-        module.exports = { parseTagsInput };
-    }
 })();

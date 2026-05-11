@@ -1,0 +1,23 @@
+test_pod:
+  enabled: false
+
+grafana:
+  enabled: false
+
+prometheus:
+  enabled: false
+
+fluent-bit:
+  enabled: false
+
+filebeat:
+  enabled: false
+
+logstash:
+  enabled: false
+
+promtail:
+  enabled: true
+
+loki:
+  isDefault: false

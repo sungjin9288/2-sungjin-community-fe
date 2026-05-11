@@ -7,6 +7,11 @@ metadata:
     app: community-frontend
 spec:
   replicas: ${FRONTEND_REPLICAS}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
       app: community-frontend
@@ -30,17 +35,21 @@ spec:
               value: "${FILE_UPLOAD_API_URL}"
             - name: NODE_ENV
               value: "production"
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 3001
+            periodSeconds: 5
+            failureThreshold: 24
           livenessProbe:
             httpGet:
               path: /health
               port: 3001
-            initialDelaySeconds: 20
             periodSeconds: 10
           readinessProbe:
             httpGet:
               path: /health
               port: 3001
-            initialDelaySeconds: 10
             periodSeconds: 5
           resources:
             requests:

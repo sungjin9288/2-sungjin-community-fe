@@ -8,35 +8,18 @@
     <link rel="stylesheet" href="/css/design-system.css">
     <link rel="stylesheet" href="/css/common.css">
     <link rel="stylesheet" href="/css/messages.css">
+    <link rel="manifest" href="/manifest.json">
+
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="아무 말 대잔치">
+    <meta property="og:title" content="아무 말 대잔치 - 커뮤니티">
+    <meta property="og:description" content="트렌디하고 힙한 글로벌 커뮤니티, 아무 말 대잔치">
+    <meta property="og:image" content="/images/og-image.png">
+    <meta name="twitter:card" content="summary_large_image">
 </head>
 
 <body>
-    <header class="header-simple">
-        <div class="header-container">
-            <button class="btn-back" data-navigate="/posts">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-                </svg>
-            </button>
-            <h1 class="header-title">1:1 메시지</h1>
-            <div class="dropdown-wrapper">
-                <button class="btn-menu" id="btnMenu">
-                    <img
-                        id="headerProfileImage"
-                        src="/images/default-profile.png"
-                        alt="프로필"
-                        class="header-profile-img"
-                    >
-                </button>
-                <div class="dropdown-menu" id="dropdownMenu">
-                    <button data-navigate="/messages">1:1 메시지</button>
-                    <button data-navigate="/profile/edit">회원정보수정</button>
-                    <button data-navigate="/password/change">비밀번호수정</button>
-                    <button data-logout="true">로그아웃</button>
-                </div>
-            </div>
-        </div>
-    </header>
+    <div id="headerSlot" data-title="1:1 메시지" data-back-target="/posts"></div>
 
     <main class="messages-main">
         <div class="messages-shell">
@@ -60,8 +43,18 @@
                         <h2>대화 목록</h2>
                         <p>최근 1:1 메시지 기준으로 정렬됩니다.</p>
                     </div>
+                    <div class="search-bar conversation-search-bar">
+                        <input type="text" id="conversationSearchInput" class="search-input" placeholder="대화 상대 또는 최근 메시지 검색">
+                        <button type="button" id="btnConversationSearch" class="action-button secondary">찾기</button>
+                    </div>
                     <div id="conversationList" class="conversation-list">
-                        <div class="loading">대화 목록을 불러오는 중...</div>
+                        <div class="conversation-item" style="pointer-events: none; border-bottom: none;">
+                            <div class="skeleton skeleton-circle" style="width: 40px; height: 40px; margin-right: 12px;"></div>
+                            <div style="flex: 1;">
+                                <div class="skeleton skeleton-text short"></div>
+                                <div class="skeleton skeleton-text medium"></div>
+                            </div>
+                        </div>
                     </div>
                 </section>
             </aside>
@@ -69,11 +62,14 @@
             <section class="messages-content messages-panel">
                 <div class="chat-header">
                     <div class="chat-partner">
-                        <img id="chatPartnerImage" src="/images/default-profile.png" alt="대화 상대" class="chat-avatar">
+                        <img id="chatPartnerImage" src="/images/default-profile.png" alt="대화 상대 프로필" class="chat-avatar">
                         <div>
                             <div id="chatPartnerName" class="chat-name">대화 상대를 선택하세요</div>
                             <div id="chatPartnerMeta" class="chat-meta">검색 또는 대화 목록에서 시작할 수 있습니다.</div>
                         </div>
+                    </div>
+                    <div class="chat-actions">
+                        <button type="button" id="btnBlockChatUser" class="message-author-button" disabled>사용자 차단</button>
                     </div>
                 </div>
 
@@ -82,7 +78,7 @@
                 </div>
 
                 <form id="messageForm" class="message-form">
-                    <textarea id="messageInput" class="message-input" rows="3" placeholder="메시지를 입력해 주세요" disabled></textarea>
+                    <textarea id="messageInput" class="message-input auto-resize" rows="3" placeholder="메시지를 입력해 주세요" disabled></textarea>
                     <div class="message-form-footer">
                         <span id="messageHelper" class="message-helper">대화 상대를 먼저 선택하세요.</span>
                         <button type="submit" id="btnSendMessage" class="action-button" disabled>전송</button>
@@ -95,6 +91,7 @@
     <script src="/config.js"></script>
     <script src="/js/api.js"></script>
     <script src="/js/utils.js"></script>
+    <script src="/js/header.js"></script>
     <script src="/js/messages.js"></script>
 </body>
 

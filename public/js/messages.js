@@ -6,46 +6,13 @@
         selectedUser: null,
         conversations: [],
         messages: [],
-        searchResults: []
+        searchResults: [],
+        conversationQuery: ''
     };
-
-    function safeEscape(value) {
-        if (typeof escapeHtml === 'function') {
-            return escapeHtml(value);
-        }
-        return String(value || '')
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#39;');
-    }
-
-    function safeTruncate(value, maxLength) {
-        if (typeof truncateText === 'function') {
-            return truncateText(value, maxLength);
-        }
-        const normalized = String(value || '');
-        if (normalized.length <= maxLength) return normalized;
-        return `${normalized.slice(0, maxLength)}...`;
-    }
-
-    function safeFormatDate(value) {
-        if (typeof formatDate === 'function') {
-            return formatDate(value);
-        }
-        return String(value || '');
-    }
-
-    function resolveProfileImage(imageUrl) {
-        if (!imageUrl) return '/images/default-profile.png';
-        if (/^https?:\/\//i.test(imageUrl)) return imageUrl;
-        return typeof toApiUrl === 'function' ? toApiUrl(imageUrl) : imageUrl;
-    }
 
     function buildSearchUserItemHtml(user) {
         return `
-            <img class="search-user-avatar" src="${safeEscape(resolveProfileImage(user.profile_image_url))}" alt="${safeEscape(user.nickname)}">
+            <img class="search-user-avatar" src="${safeEscape(resolveImageUrl(user.profile_image_url))}" alt="${safeEscape(user.nickname)}" loading="lazy">
             <div>
                 <div class="search-user-name">${safeEscape(user.nickname)}</div>
                 <div class="search-user-email">${safeEscape(user.email)}</div>
@@ -61,7 +28,7 @@
 
         return `
             <button class="conversation-item${isActive ? ' active' : ''}" data-user-id="${partner.id}">
-                <img class="conversation-avatar" src="${safeEscape(resolveProfileImage(partner.profile_image_url))}" alt="${safeEscape(partner.nickname)}">
+                <img class="conversation-avatar" src="${safeEscape(resolveImageUrl(partner.profile_image_url))}" alt="${safeEscape(partner.nickname)}" loading="lazy">
                 <div>
                     <div class="conversation-name">${safeEscape(partner.nickname)}</div>
                     <div class="conversation-preview">${safeEscape(safeTruncate((conversation.last_message && conversation.last_message.content) || '', 36))}</div>
@@ -90,6 +57,7 @@
         const input = document.getElementById('messageInput');
         const button = document.getElementById('btnSendMessage');
         const helper = document.getElementById('messageHelper');
+        const blockButton = document.getElementById('btnBlockChatUser');
 
         if (!user) {
             if (name) name.textContent = '대화 상대를 선택하세요';
@@ -101,15 +69,17 @@
             }
             if (button) button.disabled = true;
             if (helper) helper.textContent = '대화 상대를 먼저 선택하세요.';
+            if (blockButton) blockButton.disabled = true;
             return;
         }
 
         if (name) name.textContent = user.nickname || '알 수 없음';
         if (meta) meta.textContent = user.email || '';
-        if (image) image.src = resolveProfileImage(user.profile_image_url);
+        if (image) image.src = resolveImageUrl(user.profile_image_url);
         if (input) input.disabled = false;
         if (button) button.disabled = false;
         if (helper) helper.textContent = `${user.nickname}님에게 메시지를 보냅니다.`;
+        if (blockButton) blockButton.disabled = false;
     }
 
     function renderSearchResults(users) {
@@ -118,7 +88,7 @@
         state.searchResults = Array.isArray(users) ? users : [];
 
         if (!state.searchResults.length) {
-            container.innerHTML = '<div class="empty-state">검색 결과가 없습니다.</div>';
+            container.innerHTML = buildEmptyStateHtml('검색 결과가 없습니다.');
             return;
         }
 
@@ -132,7 +102,7 @@
         if (!container) return;
 
         if (!state.conversations.length) {
-            container.innerHTML = '<div class="empty-state">아직 시작한 대화가 없습니다.</div>';
+            container.innerHTML = buildEmptyStateHtml('아직 시작한 대화가 없습니다.', 'message');
             return;
         }
 
@@ -146,12 +116,12 @@
         if (!container) return;
 
         if (!state.selectedUser) {
-            container.innerHTML = '<div class="empty-state">대화 상대를 선택하면 메시지가 표시됩니다.</div>';
+            container.innerHTML = buildEmptyStateHtml('대화 상대를 선택하면 메시지가 표시됩니다.', 'message');
             return;
         }
 
         if (!state.messages.length) {
-            container.innerHTML = '<div class="empty-state">첫 메시지를 보내 대화를 시작하세요.</div>';
+            container.innerHTML = buildEmptyStateHtml('첫 메시지를 보내 대화를 시작하세요.', 'message');
             return;
         }
 
@@ -159,27 +129,13 @@
         container.scrollTop = container.scrollHeight;
     }
 
-    async function loadHeaderProfile() {
-        const response = await getMe();
-        const user = response && response.data ? response.data : response;
-        state.me = user;
-
-        const headerImage = document.getElementById('headerProfileImage');
-        if (headerImage) {
-            headerImage.src = resolveProfileImage(user && user.profile_image_url);
-            headerImage.onerror = function onHeaderImageError() {
-                this.src = '/images/default-profile.png';
-            };
-        }
-    }
-
     async function refreshConversations() {
-        const response = await getConversations();
-        state.conversations = response && response.data ? response.data : [];
+        const response = await getConversations(state.conversationQuery);
+        state.conversations = extractData(response, []);
         renderConversations();
     }
 
-    async function loadConversations(selectUserId = null) {
+    async function loadConversations(selectUserId) {
         await refreshConversations();
 
         if (selectUserId) {
@@ -205,7 +161,7 @@
         renderConversations();
 
         const response = await getMessagesWithUser(user.id);
-        state.messages = response && response.data ? response.data : [];
+        state.messages = extractData(response, []);
         renderMessages();
         await refreshConversations();
         renderConversations();
@@ -215,23 +171,8 @@
         const input = document.getElementById('userSearchInput');
         const keyword = input ? input.value.trim() : '';
         const response = await searchMessageUsers(keyword);
-        const users = response && response.data ? response.data : [];
+        const users = extractData(response, []);
         renderSearchResults(users);
-    }
-
-    function bindDropdownMenu() {
-        const btnMenu = document.getElementById('btnMenu');
-        const dropdownMenu = document.getElementById('dropdownMenu');
-        if (!btnMenu || !dropdownMenu) return;
-
-        btnMenu.addEventListener('click', (event) => {
-            event.stopPropagation();
-            dropdownMenu.classList.toggle('show');
-        });
-
-        document.addEventListener('click', () => {
-            dropdownMenu.classList.remove('show');
-        });
     }
 
     function bindEvents() {
@@ -241,6 +182,9 @@
         const conversationList = document.getElementById('conversationList');
         const messageForm = document.getElementById('messageForm');
         const messageInput = document.getElementById('messageInput');
+        const btnConversationSearch = document.getElementById('btnConversationSearch');
+        const conversationSearchInput = document.getElementById('conversationSearchInput');
+        const btnBlockChatUser = document.getElementById('btnBlockChatUser');
 
         if (searchButton) {
             searchButton.addEventListener('click', async () => {
@@ -253,6 +197,22 @@
                 if (event.key !== 'Enter') return;
                 event.preventDefault();
                 await handleSearch();
+            });
+        }
+
+        if (btnConversationSearch && conversationSearchInput) {
+            btnConversationSearch.addEventListener('click', async () => {
+                state.conversationQuery = conversationSearchInput.value.trim();
+                await loadConversations(state.selectedUser && state.selectedUser.id);
+            });
+        }
+
+        if (conversationSearchInput) {
+            conversationSearchInput.addEventListener('keydown', async (event) => {
+                if (event.key !== 'Enter') return;
+                event.preventDefault();
+                state.conversationQuery = conversationSearchInput.value.trim();
+                await loadConversations(state.selectedUser && state.selectedUser.id);
             });
         }
 
@@ -283,13 +243,13 @@
                 event.preventDefault();
 
                 if (!state.selectedUser) {
-                    showToast('대화 상대를 먼저 선택해 주세요.');
+                    showToast('대화 상대를 먼저 선택해 주세요.', { type: 'warning' });
                     return;
                 }
 
                 const content = messageInput.value.trim();
                 if (!content) {
-                    showToast('메시지를 입력해 주세요.');
+                    showToast('메시지를 입력해 주세요.', { type: 'warning' });
                     return;
                 }
 
@@ -304,6 +264,29 @@
                 }
             });
         }
+
+        if (btnBlockChatUser) {
+            btnBlockChatUser.addEventListener('click', async () => {
+                if (!state.selectedUser) return;
+                const confirmed = showConfirmDialog(`${state.selectedUser.nickname}님을 차단하시겠습니까? 이후 해당 사용자의 글과 메시지를 숨깁니다.`);
+                if (!confirmed) return;
+
+                try {
+                    await blockUser(state.selectedUser.id);
+                    showToast('사용자를 차단했습니다.');
+                    state.selectedUser = null;
+                    state.messages = [];
+                    setChatPartner(null);
+                    renderMessages();
+                    await refreshConversations();
+                    await refreshHeaderIndicators();
+                } catch (error) {
+                    handleApiError(error, {
+                        fallbackMessage: '사용자 차단에 실패했습니다.'
+                    });
+                }
+            });
+        }
     }
 
     async function bootstrapMessagesPage() {
@@ -312,13 +295,15 @@
 
         bindDropdownMenu();
         bindEvents();
-        await loadHeaderProfile();
+
+        const headerUser = await loadHeaderProfile();
+        state.me = headerUser;
 
         const initialUserId = Number(getQueryParam('userId') || 0);
         await loadConversations(initialUserId || null);
         if (!state.selectedUser && initialUserId) {
             const response = await searchMessageUsers('');
-            const users = response && response.data ? response.data : [];
+            const users = extractData(response, []);
             const nextUser = users.find((item) => Number(item.id) === initialUserId);
             if (nextUser) {
                 await selectConversation(nextUser);

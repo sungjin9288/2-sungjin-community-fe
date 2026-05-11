@@ -2,6 +2,8 @@
  * Post edit page script
  */
 (function initEditPostPage() {
+    'use strict';
+
     let currentPostId = null;
     let uploadedImageFile = null;
     let existingImageUrl = null;
@@ -14,13 +16,12 @@
         currentPostId = pathParts[2]; // /posts/:id/edit
 
         if (!currentPostId) {
-            showToast('게시글 ID를 확인할 수 없습니다.');
+            showToast('게시글 ID를 확인할 수 없습니다.', { type: 'error' });
             navigateTo('/posts');
             return;
         }
 
         const form = document.getElementById('editForm');
-        const btnBack = document.getElementById('btnBack');
         const imageInput = document.getElementById('image');
         const imagePreview = document.getElementById('imagePreview');
         const previewImg = document.getElementById('previewImg');
@@ -37,36 +38,52 @@
         bindDropdownMenu();
         bindHeaderEvents();
         await loadPostData();
+
+        const DRAFT_KEY = `post_edit_${currentPostId}`;
+        const draft = loadDraft(DRAFT_KEY);
+        if (draft && (draft.title || draft.content || draft.tags)) {
+            if (showConfirmDialog('작성 중이던 임시 저장된 수정본이 있습니다. 불러오시겠습니까?')) {
+                if (titleInput && typeof draft.title === 'string') titleInput.value = draft.title;
+                if (contentInput && typeof draft.content === 'string') {
+                    contentInput.value = draft.content;
+                    contentInput.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+                if (tagsInput && typeof draft.tags === 'string') tagsInput.value = draft.tags;
+            }
+        }
+
         checkFormValid();
 
         function bindHeaderEvents() {
-            if (btnBack) {
-                btnBack.addEventListener('click', () => history.back());
-            }
-
             titleInput.addEventListener('input', checkFormValid);
             contentInput.addEventListener('input', checkFormValid);
+            if (tagsInput) {
+                tagsInput.addEventListener('input', checkFormValid);
+            }
         }
 
         function checkFormValid() {
             const title = titleInput.value.trim();
             const content = contentInput.value.trim();
-            submitButton.style.background = title && content ? '#7F6AEE' : '#ACA0EB';
+            const tags = tagsInput ? tagsInput.value : '';
+            setSubmitButtonState(submitButton, Boolean(title && content));
+
+            saveDraft(`post_edit_${currentPostId}`, {
+                title: titleInput.value,
+                content: contentInput.value,
+                tags
+            });
         }
 
         if (imageInput) {
+            setupImageDragAndDrop(imageInput);
             imageInput.addEventListener('change', (event) => {
                 const file = event.target.files && event.target.files[0];
                 if (!file) return;
 
-                if (file.size > 5 * 1024 * 1024) {
-                    showToast('이미지 크기는 5MB 이하여야 합니다.');
-                    imageInput.value = '';
-                    return;
-                }
-
-                if (!file.type.startsWith('image/')) {
-                    showToast('이미지 파일만 업로드 가능합니다.');
+                const validation = validateImageFile(file);
+                if (!validation.valid) {
+                    showToast(validation.message, { type: 'error' });
                     imageInput.value = '';
                     return;
                 }
@@ -103,12 +120,12 @@
             const tags = parseTagsInput(tagsInput ? tagsInput.value : '');
 
             if (!title) {
-                showToast('제목을 입력해 주세요.');
+                showToast('제목을 입력해 주세요.', { type: 'warning' });
                 return;
             }
 
             if (!content) {
-                showToast('내용을 입력해 주세요.');
+                showToast('내용을 입력해 주세요.', { type: 'warning' });
                 return;
             }
 
@@ -125,6 +142,7 @@
                 }
 
                 await updatePost(currentPostId, title, content, nextImageUrl, tags);
+                clearDraft(`post_edit_${currentPostId}`);
 
                 if (confirmModal) {
                     confirmModal.style.display = 'flex';
@@ -149,11 +167,12 @@
 
         try {
             const response = await getPost(currentPostId);
-            const post = response && response.data ? response.data : response;
+            const post = extractData(response);
 
-            titleInput.value = post.title || '';
-            contentInput.value = post.content || '';
-            tagsInput.value = normalizePostTags(post.tags).join(', ');
+            titleInput.value = post.title;
+            contentInput.value = post.content;
+            contentInput.dispatchEvent(new Event('input', { bubbles: true }));
+            if (tagsInput) tagsInput.value = normalizePostTags(post.tags).join(', ');
 
             if (post.image_url) {
                 existingImageUrl = post.image_url;
@@ -167,22 +186,6 @@
             });
             navigateTo('/posts');
         }
-    }
-
-    function bindDropdownMenu() {
-        const btnMenu = document.getElementById('btnMenu');
-        const dropdownMenu = document.getElementById('dropdownMenu');
-
-        if (!btnMenu || !dropdownMenu) return;
-
-        btnMenu.addEventListener('click', (event) => {
-            event.stopPropagation();
-            dropdownMenu.classList.toggle('show');
-        });
-
-        document.addEventListener('click', () => {
-            dropdownMenu.classList.remove('show');
-        });
     }
 
     function removeImage() {
@@ -200,30 +203,4 @@
         if (currentImageName) currentImageName.textContent = '';
     }
 
-    function parseTagsInput(value) {
-        if (!value) return [];
-        const tags = value
-            .split(',')
-            .map((tag) => tag.trim().replace(/^#/, ''))
-            .filter(Boolean);
-        return [...new Set(tags)].slice(0, 5);
-    }
-
-    function normalizePostTags(tags) {
-        if (!Array.isArray(tags)) return [];
-        return [...new Set(tags
-            .map((tag) => String(tag || '').trim().replace(/^#/, ''))
-            .filter(Boolean)
-        )];
-    }
-
-    function resolveImageUrl(imageUrl) {
-        if (!imageUrl) return '';
-        if (/^https?:\/\//i.test(imageUrl)) return imageUrl;
-        return typeof toApiUrl === 'function' ? toApiUrl(imageUrl) : imageUrl;
-    }
-
-    if (typeof module !== 'undefined' && module.exports) {
-        module.exports = { parseTagsInput, normalizePostTags };
-    }
 })();

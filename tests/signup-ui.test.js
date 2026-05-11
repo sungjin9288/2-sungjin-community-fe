@@ -18,16 +18,19 @@ test('isEmailAlreadyExistsMessage matches duplicate email validation errors', ()
 test('applyEmailHelperState updates helper text and color together', () => {
     const helper = {
         textContent: '',
-        style: {
-            color: ''
+        classList: {
+            classes: new Set(),
+            add(c) { this.classes.add(c); },
+            remove(...c) { c.forEach(cls => this.classes.delete(cls)); },
+            has(c) { return this.classes.has(c); }
         }
     };
 
     signupUi.applyEmailHelperState(helper, signupUi.EMAIL_HELPER_STATE.available);
     assert.equal(helper.textContent, '사용 가능한 이메일입니다.');
-    assert.equal(helper.style.color, '#28a745');
+    assert.equal(helper.classList.has('helper-success'), true);
 
     signupUi.applyEmailHelperState(helper, signupUi.EMAIL_HELPER_STATE.default);
     assert.equal(helper.textContent, '@를 포함한 이메일 형식으로 입력해 주세요.');
-    assert.equal(helper.style.color, '#999');
+    assert.equal(helper.classList.has('helper-default'), true);
 });

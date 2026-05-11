@@ -8,7 +8,7 @@ This repository was built as a portfolio-grade submission for an academy project
 
 - Frontend Repo: `https://github.com/sungjin9288/2-sungjin-community-fe`
 - Backend Repo: `https://github.com/sungjin9288/2-sungjin-community-be`
-- Runtime note: AWS runtime resources were **validated and then torn down on 2026-03-11** to avoid ongoing cost. Code, IaC, workflow assets, and deployment evidence remain in the repository.
+- Runtime note: AWS runtime resources were **validated and then torn down on 2026-03-16** to avoid ongoing cost. Code, IaC, workflow assets, and deployment evidence remain in the repository.
 
 ## 담당 범위 | Responsibility Scope
 This frontend repository covers the following responsibilities:
@@ -35,6 +35,22 @@ This frontend repository covers the following responsibilities:
   - `GitHub Actions -> ECS`
   - `GitHub Actions -> Kubernetes (staging validation)`
   - `Frontend Blue/Green on EC2`
+- Executed a **kubeadm single-control-plane lab twice**:
+  - `Rocky Linux 9.6 + containerd + Calico`
+  - `Ubuntu 22.04 LTS + containerd + Calico`
+- Installed and validated:
+  - `Kubernetes Dashboard`
+  - `Grafana`
+  - `Prometheus`
+  - `Loki / Promtail`
+- Verified Grafana datasource wiring with actual responses from:
+  - `Prometheus metric query`
+  - `Loki labels API`
+- Verified Kubernetes behavior with:
+  - FE/BE/MySQL deployment
+  - `startupProbe`, `readinessProbe`, `livenessProbe`
+  - pod self-healing after manual deletion
+  - `RollingUpdate` using new image tags with cluster-internal health loop continuity
 - Fixed a real production issue around the signup flow so helper state and error state no longer conflict on the same screen.
 
 ## 기술 스택 | Tech Stack
@@ -59,6 +75,8 @@ This frontend repository covers the following responsibilities:
 - `AWS ECS Fargate`
 - `AWS EKS (staging validation)`
 - `Nginx reverse proxy`
+- `kubeadm single-control-plane on Rocky Linux / Ubuntu`
+- `Helm-based observability stack`
 
 ## 시스템 동작 방식 | Runtime Architecture
 
@@ -234,6 +252,8 @@ This frontend repository participated in validating the following delivery targe
 | GitHub Actions -> Kubernetes | Done (staging validation) | EKS staging deploy verified, then torn down |
 | Frontend Blue/Green deployment | Done | EC2-based blue/green workflow validated |
 | Dedicated self-hosted runner host | Done (bootstrap assets) | Separate EC2 runner Terraform/userdata assets included |
+| Rocky Linux kubeadm lab | Done | `containerd + Calico + Dashboard + Grafana/Prometheus/Loki + FE/BE probes` validated |
+| Ubuntu 22.04 kubeadm lab | Done | Same lab rebuilt, clean uninstall performed, Helm reinstall re-validated |
 
 ## Portfolio Evidence | 포트폴리오 관점의 Evidence
 This repository is suitable for portfolio review because it demonstrates:
@@ -253,6 +273,28 @@ Because this project is a portfolio artifact rather than a commercial service, A
 - Kubernetes templates
 - Docker Compose deployment assets
 - runbooks and reliability documentation
+
+### Kubernetes Lab Evidence / Kubernetes 실습 증빙
+The kubeadm-based lab was executed and verified on `2026-03-16`.
+
+- Rocky Linux 9.6:
+  - `containerd 1.7.28`
+  - `Calico v3.31.3`
+  - `Kubernetes Dashboard` HTTP 200 response verified
+  - `Grafana` health verified
+  - `Grafana -> Prometheus` query returned `community-frontend replicas = 3`
+  - `Grafana -> Loki` labels API returned log labels successfully
+  - `community-frontend`, `community-backend`, `community-mysql` deployed with probes
+  - frontend pod deletion recreated a new pod automatically
+  - frontend `RollingUpdate` using `rocky-k8s-lab-v5-20260316` kept cluster-internal health at `20/20 = 200`
+
+- Ubuntu 22.04:
+  - same single-control-plane topology rebuilt
+  - monitoring stack removed cleanly
+  - Dashboard / Prometheus / Grafana / Loki were reinstalled with Helm and re-verified
+
+Detailed replay steps and execution notes:
+- [k8s-single-control-plane-lab-runbook.md](docs/k8s-single-control-plane-lab-runbook.md)
 
 To prevent accidental re-provisioning, AWS deployment workflows in this repository are currently kept as `workflow_dispatch` only.
 

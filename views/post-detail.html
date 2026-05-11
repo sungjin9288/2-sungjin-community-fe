@@ -8,41 +8,23 @@
     <link rel="stylesheet" href="/css/design-system.css">
     <link rel="stylesheet" href="/css/common.css">
     <link rel="stylesheet" href="/css/posts.css">
+    <link rel="manifest" href="/manifest.json">
+
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="아무 말 대잔치">
+    <meta property="og:title" content="아무 말 대잔치 - 커뮤니티">
+    <meta property="og:description" content="트렌디하고 힙한 글로벌 커뮤니티, 아무 말 대잔치">
+    <meta property="og:image" content="/images/og-image.png">
+    <meta name="twitter:card" content="summary_large_image">
 </head>
 
 <body>
-    <header class="header-simple">
-        <div class="header-container">
-            <button class="btn-back" data-history-back="true">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-                </svg>
-            </button>
-            <h1 class="header-title">아무 말 대잔치</h1>
-            <div class="dropdown-wrapper">
-                <button class="btn-menu" id="btnMenu">
-                    <img
-                        id="headerProfileImage"
-                        src="/images/default-profile.png"
-                        alt="프로필"
-                        class="header-profile-img"
-                        style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;"
-                    >
-                </button>
-                <div class="dropdown-menu" id="dropdownMenu">
-                    <button data-navigate="/messages">1:1 메시지</button>
-                    <button data-navigate="/profile/edit">회원정보수정</button>
-                    <button data-navigate="/password/change">비밀번호수정</button>
-                    <button data-logout="true">로그아웃</button>
-                </div>
-            </div>
-        </div>
-    </header>
+    <div id="headerSlot" data-title="아무 말 대잔치" data-back-action="history"></div>
 
     <main class="post-detail-main">
         <div class="post-detail-container">
             <div class="post-header">
-                <h1 id="postTitle" class="post-title">제목을 불러오는 중...</h1>
+                <h1 id="postTitle" class="post-title"><div class="skeleton skeleton-text medium" style="height: 36px;"></div></h1>
                 <div class="post-actions" id="postActions" style="display: none;">
                     <button class="btn-edit" id="btnEditPost">수정</button>
                     <button class="btn-delete" id="btnDeletePost">삭제</button>
@@ -51,18 +33,29 @@
 
             <div class="post-meta">
                 <div class="author-info">
-                    <img id="authorImage" src="/images/default-profile.png" alt="프로필" class="author-avatar">
+                    <img id="authorImage" src="/images/default-profile.png" alt="작성자 프로필" class="author-avatar">
                     <div>
                         <p id="authorName" class="author-name">작성자</p>
                         <p id="postDate" class="post-date">날짜</p>
                     </div>
                 </div>
-                <button id="btnMessageAuthor" class="message-author-button" style="display: none;">작성자에게 메시지</button>
+                <div class="post-meta-actions">
+                    <button id="btnBookmarkToggle" class="message-author-button">북마크</button>
+                    <button id="btnReportPost" class="message-author-button" style="display: none;">게시글 신고</button>
+                    <button id="btnBlockAuthor" class="message-author-button" style="display: none;">작성자 차단</button>
+                    <button id="btnMessageAuthor" class="message-author-button" style="display: none;">작성자에게 메시지</button>
+                </div>
             </div>
 
             <div class="post-content">
                 <div id="postImage" class="post-image" style="display: none;"></div>
-                <div id="postBody" class="post-body">내용을 불러오는 중...</div>
+                <div id="postBody" class="post-body">
+                    <div class="skeleton skeleton-text"></div>
+                    <div class="skeleton skeleton-text"></div>
+                    <div class="skeleton skeleton-text medium"></div>
+                    <br>
+                    <div class="skeleton skeleton-text short"></div>
+                </div>
             </div>
 
             <div class="post-stats">
@@ -97,12 +90,27 @@
                 <h3 class="comments-title">댓글</h3>
 
                 <div class="comment-input-container">
-                    <textarea id="commentInput" class="comment-input" placeholder="댓글을 입력해 주세요" rows="3"></textarea>
+                    <div id="replyTargetBar" class="reply-target-bar" style="display: none;">
+                        <span id="replyTargetText">답글 작성 중</span>
+                        <button id="btnCancelReply" type="button" class="btn-comment-cancel">답글 취소</button>
+                    </div>
+                    <textarea id="commentInput" class="comment-input auto-resize" placeholder="댓글을 입력해 주세요" rows="3"></textarea>
                     <button class="btn-comment-submit" id="btnSubmitComment">댓글 등록</button>
                 </div>
 
                 <div id="commentsList" class="comments-list">
-                    <div class="loading">댓글을 불러오는 중...</div>
+                    <div class="comment-item" style="pointer-events: none; border-bottom: none;">
+                        <div class="comment-header">
+                            <div class="comment-author" style="width: 100%;">
+                                <div class="skeleton skeleton-circle comment-avatar"></div>
+                                <div style="flex: 1;">
+                                    <div class="skeleton skeleton-text short"></div>
+                                    <div class="skeleton skeleton-text" style="width: 30%;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="skeleton skeleton-text medium"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -133,6 +141,7 @@
     <script src="/config.js"></script>
     <script src="/js/api.js"></script>
     <script src="/js/utils.js"></script>
+    <script src="/js/header.js"></script>
     <script src="/js/posts/detail.js"></script>
 </body>
 

@@ -1,6 +1,11 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
+global.safeEscape = (str) => String(str || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+global.resolveImageUrl = (url) => url || '/images/default.png';
+global.safeTruncate = (str, len) => str;
+global.safeFormatDate = (date) => 'mock-date';
+
 const messagesUi = require('../public/js/messages.js');
 
 test('buildSearchUserItemHtml renders nickname and email', () => {

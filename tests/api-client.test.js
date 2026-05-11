@@ -33,6 +33,27 @@ function jsonResponse(status, payload) {
     };
 }
 
+function streamResponse(chunks) {
+    return {
+        ok: true,
+        status: 200,
+        headers: {
+            get(name) {
+                if (String(name).toLowerCase() === 'content-type') {
+                    return 'text/event-stream';
+                }
+                return null;
+            }
+        },
+        body: new ReadableStream({
+            start(controller) {
+                chunks.forEach((chunk) => controller.enqueue(Buffer.from(chunk, 'utf8')));
+                controller.close();
+            }
+        })
+    };
+}
+
 function loadApiClient({ fetchImpl, localStorageData = {}, pathname = '/posts' }) {
     global.fetch = fetchImpl;
     global.localStorage = createStorage(localStorageData);
@@ -206,4 +227,133 @@ test('getPosts sends sort and tag query params', async () => {
     assert.match(urls[0], /limit=15/);
     assert.match(urls[0], /sort=discussed/);
     assert.match(urls[0], /tag=react/);
+});
+
+test('streamChatWithBot sends profile payload and dispatches SSE chunks', async () => {
+    const calls = [];
+    const chunks = [];
+    let donePayload = null;
+
+    const api = loadApiClient({
+        fetchImpl: async (url, options = {}) => {
+            calls.push({ url, options });
+            return streamResponse([
+                'event: chunk\ndata: "안녕하세요 "\n\n',
+                'event: chunk\ndata: "추천입니다."\n\n',
+                'event: done\ndata: {"reply":"안녕하세요 추천입니다.","recommended":[]}\n\n'
+            ]);
+        }
+    });
+
+    const result = await api.streamChatWithBot(
+        '성수 파스타',
+        'session-test',
+        { regions: ['성수'], cuisines: ['파스타'] },
+        {
+            chunk(text) {
+                chunks.push(text);
+            },
+            done(payload) {
+                donePayload = payload;
+            }
+        }
+    );
+
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].url, 'http://api.test/chatbot/chat/stream');
+    const body = JSON.parse(calls[0].options.body);
+    assert.equal(body.message, '성수 파스타');
+    assert.equal(body.session_id, 'session-test');
+    assert.deepEqual(body.profile.regions, ['성수']);
+    assert.deepEqual(chunks, ['안녕하세요 ', '추천입니다.']);
+    assert.equal(donePayload.reply, '안녕하세요 추천입니다.');
+    assert.equal(result.reply, '안녕하세요 추천입니다.');
+});
+
+test('chatbot requests attach optional Authorization for logged-in users', async () => {
+    const calls = [];
+    const api = loadApiClient({
+        localStorageData: {
+            'auth.access_token': 'chatbot-access-token'
+        },
+        fetchImpl: async (url, options = {}) => {
+            calls.push({ url, options });
+            return jsonResponse(200, {
+                message: 'chat_success',
+                data: { reply: 'ok', recommended: [], memory_scope: 'user' }
+            });
+        }
+    });
+
+    const data = await api.chatWithBot('강남 파스타 추천', 'session-chatbot', {
+        regions: ['강남']
+    });
+
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].url, 'http://api.test/chatbot/chat');
+    assert.equal(calls[0].options.headers.Authorization, 'Bearer chatbot-access-token');
+    assert.equal(data.memory_scope, 'user');
+});
+
+test('streamChatWithBot attaches optional Authorization for logged-in users', async () => {
+    const calls = [];
+    const api = loadApiClient({
+        localStorageData: {
+            'auth.access_token': 'stream-access-token'
+        },
+        fetchImpl: async (url, options = {}) => {
+            calls.push({ url, options });
+            return streamResponse([
+                'event: done\ndata: {"reply":"ok","recommended":[],"memory_scope":"user"}\n\n'
+            ]);
+        }
+    });
+
+    const result = await api.streamChatWithBot('강남 파스타', 'session-stream', {});
+
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].options.headers.Authorization, 'Bearer stream-access-token');
+    assert.equal(result.memory_scope, 'user');
+});
+
+test('streamChatWithBot rejects SSE error events instead of returning an empty payload', async () => {
+    const api = loadApiClient({
+        fetchImpl: async () => streamResponse([
+            'event: error\ndata: {"message":"validation_error","detail":"profile invalid"}\n\n'
+        ])
+    });
+
+    await assert.rejects(
+        () => api.streamChatWithBot('강남 파스타', 'session-stream-error', {}),
+        (error) => {
+            assert.equal(error.name, 'ApiError');
+            assert.equal(error.code, 'validation_error');
+            assert.equal(error.message, '입력값을 확인해 주세요.');
+            return true;
+        }
+    );
+});
+
+test('getChatbotProfile loads persisted preference memory by session id', async () => {
+    const calls = [];
+    const api = loadApiClient({
+        fetchImpl: async (url, options = {}) => {
+            calls.push({ url, options });
+            return jsonResponse(200, {
+                message: 'profile_loaded',
+                data: {
+                    profile: { regions: ['강남'], cuisines: ['파스타'] },
+                    storage: 'database'
+                }
+            });
+        }
+    });
+
+    const data = await api.getChatbotProfile('session-profile');
+
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].url, 'http://api.test/chatbot/profile?session_id=session-profile');
+    assert.equal(calls[0].options.method, 'GET');
+    assert.deepEqual(data.profile.regions, ['강남']);
+    assert.equal(data.storage, 'database');
 });

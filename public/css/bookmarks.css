@@ -1,0 +1,22 @@
+.bookmarks-shell {
+    display: grid;
+    gap: 24px;
+}
+
+.bookmarks-toolbar {
+    padding: 0 10px;
+}
+
+.bookmarks-toolbar h2 {
+    color: var(--color-text-main);
+    font-size: 24px;
+    margin-bottom: 8px;
+}
+
+.bookmarks-toolbar p {
+    color: var(--color-text-sub);
+}
+
+.bookmark-card {
+    min-height: 240px;
+}

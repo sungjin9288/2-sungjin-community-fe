@@ -8,20 +8,18 @@
     <link rel="stylesheet" href="/css/design-system.css">
     <link rel="stylesheet" href="/css/common.css">
     <link rel="stylesheet" href="/css/write.css">
+    <link rel="manifest" href="/manifest.json">
+
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="아무 말 대잔치">
+    <meta property="og:title" content="아무 말 대잔치 - 커뮤니티">
+    <meta property="og:description" content="트렌디하고 힙한 글로벌 커뮤니티, 아무 말 대잔치">
+    <meta property="og:image" content="/images/og-image.png">
+    <meta name="twitter:card" content="summary_large_image">
 </head>
 
 <body>
-    <header class="header-simple">
-        <div class="header-container">
-            <button class="btn-back" id="btnBack">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-                </svg>
-            </button>
-            <h1 class="header-title">아무 말 대잔치</h1>
-            <div class="header-spacer"></div>
-        </div>
-    </header>
+    <div id="headerSlot" data-title="아무 말 대잔치" data-back-action="history"></div>
 
     <main class="write-main">
         <div class="write-container">
@@ -45,11 +43,14 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="content">내용*</label>
+                    <label for="content">
+                        내용*
+                        <span style="float: right; font-size: 12px; font-weight: 400; color: var(--color-text-sub);">마크다운(Markdown) 문법을 지원합니다.</span>
+                    </label>
                     <textarea
                         id="content"
                         name="content"
-                        class="form-textarea"
+                        class="form-textarea auto-resize"
                         placeholder="내용을 입력해 주세요"
                         rows="10"
                         required
@@ -86,8 +87,8 @@
                         </label>
                     </div>
                     <div id="imagePreview" class="image-preview" style="display: none;">
-                        <img id="previewImg" src="" alt="미리보기">
-                        <button type="button" class="btn-remove-image" id="btnRemoveImage">×</button>
+                        <img id="previewImg" src="" alt="업로드 이미지 미리보기">
+                        <button type="button" id="btnRemoveImage" class="btn-remove-image" aria-label="이미지 삭제">×</button>
                     </div>
                 </div>
 
@@ -111,6 +112,7 @@
     <script src="/config.js"></script>
     <script src="/js/api.js"></script>
     <script src="/js/utils.js"></script>
+    <script src="/js/header.js"></script>
     <script src="/js/posts/write.js"></script>
 </body>
 

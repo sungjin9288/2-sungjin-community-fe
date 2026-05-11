@@ -7,6 +7,11 @@ metadata:
     app: community-backend
 spec:
   replicas: ${BACKEND_REPLICAS}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
       app: community-backend
@@ -32,17 +37,21 @@ spec:
               value: "${CORS_ALLOW_ORIGINS}"
             - name: PYTHONUNBUFFERED
               value: "1"
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 5
+            failureThreshold: 24
           livenessProbe:
             httpGet:
               path: /health
               port: 8000
-            initialDelaySeconds: 20
             periodSeconds: 10
           readinessProbe:
             httpGet:
               path: /health
               port: 8000
-            initialDelaySeconds: 10
             periodSeconds: 5
           resources:
             requests:

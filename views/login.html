@@ -8,6 +8,14 @@
     <link rel="stylesheet" href="/css/design-system.css">
     <link rel="stylesheet" href="/css/common.css">
     <link rel="stylesheet" href="/css/auth.css">
+    <link rel="manifest" href="/manifest.json">
+
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="아무 말 대잔치">
+    <meta property="og:title" content="아무 말 대잔치 - 커뮤니티">
+    <meta property="og:description" content="트렌디하고 힙한 글로벌 커뮤니티, 아무 말 대잔치">
+    <meta property="og:image" content="/images/og-image.png">
+    <meta name="twitter:card" content="summary_large_image">
 </head>
 
 <body>
@@ -26,13 +34,13 @@
             <form id="loginForm" class="auth-form">
                 <div class="form-group">
                     <label for="email">이메일</label>
-                    <input type="email" id="email" name="email" class="form-input" placeholder="이메일을 입력해 주세요" required>
+                    <input type="email" id="email" name="email" class="form-input" placeholder="이메일을 입력해 주세요" autocomplete="email" required>
                     <span class="form-error" id="emailError"></span>
                 </div>
 
                 <div class="form-group">
                     <label for="password">비밀번호</label>
-                    <input type="password" id="password" name="password" class="form-input" placeholder="비밀번호를 입력해 주세요" required>
+                    <input type="password" id="password" name="password" class="form-input" placeholder="비밀번호를 입력해 주세요" autocomplete="current-password" required>
                     <span class="form-error" id="passwordError"></span>
                 </div>
 
