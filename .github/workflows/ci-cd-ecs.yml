@@ -26,10 +26,10 @@ jobs:
 
     steps:
       - name: Checkout frontend
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 20
           cache: npm
@@ -170,7 +170,7 @@ jobs:
           echo "ecs_backend_container_name=$ECS_BACKEND_CONTAINER_NAME_VALUE" >> "$GITHUB_OUTPUT"
 
       - name: Checkout backend
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: ${{ env.BACKEND_REPO }}
           ref: ${{ steps.vars.outputs.backend_ref }}
